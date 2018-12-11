@@ -43,6 +43,7 @@
 		spi-1 = &spi1;
 		uart-0 = &uart0;
 		adc-0 = &adc;
+		clock = &clock;
 		gpio-0 = &gpio0;
 		gpiote-0 = &gpiote;
 		wdt-0 = &wdt;
@@ -56,6 +57,16 @@
 			interrupts = <7 1>;
 			status = "disabled";
 			label = "ADC_0";
+		};
+
+		clock: clock@40000000 {
+			compatible = "nordic,nrf-clock";
+			/* Same base address for CLOCK, POWER, and MPU */
+			reg = <0x40000000 0x1000>;
+			/* Same interrupt for CLOCK, POWER, and MPU */
+			interrupts = <0 1>;
+			status = "ok";
+			label = "CLOCK";
 		};
 
 		uart0: uart@40002000 {

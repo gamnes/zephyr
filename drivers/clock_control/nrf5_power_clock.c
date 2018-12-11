@@ -17,6 +17,9 @@
 #include <drivers/clock_control/nrf5_clock_control.h>
 #endif
 
+static NRF_CLOCK_Type *const nrf_clock_addr =
+		      (NRF_CLOCK_Type *)DT_NORDIC_NRF_CLOCK_CLOCK_BASE_ADDRESS;
+
 static u8_t m16src_ref;
 static u8_t m16src_grd;
 static u8_t k32src_initialized;
@@ -56,32 +59,32 @@ static int _m16src_start(struct device *dev, clock_control_subsys_t sub_system)
 	if (blocking) {
 		u32_t intenset;
 
-		irq_disable(POWER_CLOCK_IRQn);
+		irq_disable(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 
-		NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
+		nrf_clock_addr->EVENTS_HFCLKSTARTED = 0;
 
-		intenset = NRF_CLOCK->INTENSET;
+		intenset = nrf_clock_addr->INTENSET;
 		nrf_clock_int_enable(NRF_CLOCK_INT_HF_STARTED_MASK);
 
 		nrf_clock_task_trigger(NRF_CLOCK_TASK_HFCLKSTART);
 
-		while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) {
+		while (nrf_clock_addr->EVENTS_HFCLKSTARTED == 0) {
 			__WFE();
 			__SEV();
 			__WFE();
 		}
 
-		NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
+		nrf_clock_addr->EVENTS_HFCLKSTARTED = 0;
 
 		if (!(intenset & CLOCK_INTENSET_HFCLKSTARTED_Msk)) {
 			nrf_clock_int_disable(NRF_CLOCK_INT_HF_STARTED_MASK);
 		}
 
-		NVIC_ClearPendingIRQ(POWER_CLOCK_IRQn);
+		NVIC_ClearPendingIRQ(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 
-		irq_enable(POWER_CLOCK_IRQn);
+		irq_enable(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 	} else {
-		NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
+		nrf_clock_addr->EVENTS_HFCLKSTARTED = 0;
 
 		nrf_clock_task_trigger(NRF_CLOCK_TASK_HFCLKSTART);
 	}
@@ -96,7 +99,7 @@ hf_already_started:
 	__ASSERT_NO_MSG(m16src_ref);
 
 	stat = CLOCK_HFCLKSTAT_SRC_Xtal | CLOCK_HFCLKSTAT_STATE_Msk;
-	if ((NRF_CLOCK->HFCLKSTAT & stat) == stat) {
+	if ((nrf_clock_addr->HFCLKSTAT & stat) == stat) {
 		return 0;
 	} else {
 		return -EINPROGRESS;
@@ -177,36 +180,36 @@ static int _k32src_start(struct device *dev, clock_control_subsys_t sub_system)
 	irq_unlock(imask);
 
 	/* Clear events if any */
-	NRF_CLOCK->EVENTS_LFCLKSTARTED = 0;
+	nrf_clock_addr->EVENTS_LFCLKSTARTED = 0;
 
 	/* Set LF Clock Source */
 	lf_clk_src = POINTER_TO_UINT(sub_system);
-	NRF_CLOCK->LFCLKSRC = lf_clk_src;
+	nrf_clock_addr->LFCLKSRC = lf_clk_src;
 
 #if defined(CONFIG_CLOCK_CONTROL_NRF5_K32SRC_BLOCKING)
-	irq_disable(POWER_CLOCK_IRQn);
+	irq_disable(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 
-	intenset = NRF_CLOCK->INTENSET;
+	intenset = nrf_clock_addr->INTENSET;
 	nrf_clock_int_enable(NRF_CLOCK_INT_LF_STARTED_MASK);
 
 	/* Start and spin-wait until clock settles */
 	nrf_clock_task_trigger(NRF_CLOCK_TASK_LFCLKSTART);
 
-	while (NRF_CLOCK->EVENTS_LFCLKSTARTED == 0) {
+	while (nrf_clock_addr->EVENTS_LFCLKSTARTED == 0) {
 		__WFE();
 		__SEV();
 		__WFE();
 	}
 
-	NRF_CLOCK->EVENTS_LFCLKSTARTED = 0;
+	nrf_clock_addr->EVENTS_LFCLKSTARTED = 0;
 
 	if (!(intenset & CLOCK_INTENSET_LFCLKSTARTED_Msk)) {
 		nrf_clock_int_disable(NRF_CLOCK_INT_LF_STARTED_MASK);
 	}
 
-	NVIC_ClearPendingIRQ(POWER_CLOCK_IRQn);
+	NVIC_ClearPendingIRQ(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 
-	irq_enable(POWER_CLOCK_IRQn);
+	irq_enable(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 
 #else /* !CONFIG_CLOCK_CONTROL_NRF5_K32SRC_BLOCKING */
 	/* NOTE: LFCLK will initially start running from the LFRC if LFXO is
@@ -221,21 +224,21 @@ static int _k32src_start(struct device *dev, clock_control_subsys_t sub_system)
 	 */
 	nrf_clock_int_disable(NRF_CLOCK_INT_DONE_MASK |
 			      NRF_CLOCK_INT_CTTO_MASK);
-	NRF_CLOCK->EVENTS_DONE = 0;
-	NRF_CLOCK->EVENTS_CTTO = 0;
+	nrf_clock_addr->EVENTS_DONE = 0;
+	nrf_clock_addr->EVENTS_CTTO = 0;
 
 	if ((lf_clk_src & CLOCK_LFCLKSRC_SRC_Msk) == CLOCK_LFCLKSRC_SRC_RC) {
 		int err;
 
 		/* Set the Calibration Timer Initial Value */
-		NRF_CLOCK->CTIV = 16;	/* 4s in 0.25s units */
+		nrf_clock_addr->CTIV = 16;	/* 4s in 0.25s units */
 
 		/* Enable DONE and CTTO IRQs */
 		nrf_clock_int_enable(NRF_CLOCK_INT_DONE_MASK |
 				     NRF_CLOCK_INT_CTTO_MASK);
 
 		/* If non-blocking LF clock start, then start HF clock in ISR */
-		if ((NRF_CLOCK->LFCLKSTAT & CLOCK_LFCLKSTAT_STATE_Msk) == 0) {
+		if ((nrf_clock_addr->LFCLKSTAT & CLOCK_LFCLKSTAT_STATE_Msk) == 0) {
 			nrf_clock_int_enable(NRF_CLOCK_INT_LF_STARTED_MASK);
 			goto lf_already_started;
 		}
@@ -249,16 +252,16 @@ static int _k32src_start(struct device *dev, clock_control_subsys_t sub_system)
 
 		err = _m16src_start(dev, false);
 		if (!err) {
-			NVIC_SetPendingIRQ(POWER_CLOCK_IRQn);
+			NVIC_SetPendingIRQ(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 		} else {
 			__ASSERT_NO_MSG(err == -EINPROGRESS);
 		}
 	}
 
 lf_already_started:
-	stat = (NRF_CLOCK->LFCLKSRCCOPY & CLOCK_LFCLKSRCCOPY_SRC_Msk) |
+	stat = (nrf_clock_addr->LFCLKSRCCOPY & CLOCK_LFCLKSRCCOPY_SRC_Msk) |
 	       CLOCK_LFCLKSTAT_STATE_Msk;
-	if ((NRF_CLOCK->LFCLKSTAT & stat) == stat) {
+	if ((nrf_clock_addr->LFCLKSTAT & stat) == stat) {
 		return 0;
 	} else {
 		return -EINPROGRESS;
@@ -284,16 +287,16 @@ static void _power_clock_isr(void *arg)
 
 	pof = (NRF_POWER->EVENTS_POFWARN != 0);
 
-	hf_intenset = ((NRF_CLOCK->INTENSET &
+	hf_intenset = ((nrf_clock_addr->INTENSET &
 		       CLOCK_INTENSET_HFCLKSTARTED_Msk) != 0);
-	hf = (NRF_CLOCK->EVENTS_HFCLKSTARTED != 0);
+	hf = (nrf_clock_addr->EVENTS_HFCLKSTARTED != 0);
 
-	lf_intenset = ((NRF_CLOCK->INTENSET &
+	lf_intenset = ((nrf_clock_addr->INTENSET &
 		       CLOCK_INTENSET_LFCLKSTARTED_Msk) != 0);
-	lf = (NRF_CLOCK->EVENTS_LFCLKSTARTED != 0);
+	lf = (nrf_clock_addr->EVENTS_LFCLKSTARTED != 0);
 
-	done = (NRF_CLOCK->EVENTS_DONE != 0);
-	ctto = (NRF_CLOCK->EVENTS_CTTO != 0);
+	done = (nrf_clock_addr->EVENTS_DONE != 0);
+	ctto = (nrf_clock_addr->EVENTS_CTTO != 0);
 
 #if defined(CONFIG_USB) && defined(CONFIG_SOC_NRF52840)
 	usb_detected = nrf_power_event_check(NRF_POWER_EVENT_USBDETECTED);
@@ -311,10 +314,10 @@ static void _power_clock_isr(void *arg)
 	}
 
 	if (hf) {
-		NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
+		nrf_clock_addr->EVENTS_HFCLKSTARTED = 0;
 	}
 
-	if (hf_intenset && (hf || ((NRF_CLOCK->HFCLKSTAT &
+	if (hf_intenset && (hf || ((nrf_clock_addr->HFCLKSTAT &
 				    (CLOCK_HFCLKSTAT_STATE_Msk |
 				     CLOCK_HFCLKSTAT_SRC_Msk)) ==
 				   (CLOCK_HFCLKSTAT_STATE_Msk |
@@ -322,7 +325,7 @@ static void _power_clock_isr(void *arg)
 		/* INTENSET is used as state flag to start calibration,
 		 * hence clear it here.
 		 */
-		NRF_CLOCK->INTENCLR = CLOCK_INTENCLR_HFCLKSTARTED_Msk;
+		nrf_clock_addr->INTENCLR = CLOCK_INTENCLR_HFCLKSTARTED_Msk;
 
 #if defined(CONFIG_SOC_SERIES_NRF52X)
 		/* NOTE: Errata [192] CLOCK: LFRC frequency offset after
@@ -333,17 +336,17 @@ static void _power_clock_isr(void *arg)
 #endif /* CONFIG_SOC_SERIES_NRF52X */
 
 		/* Start Calibration */
-		NRF_CLOCK->TASKS_CAL = 1;
+		nrf_clock_addr->TASKS_CAL = 1;
 	}
 
 	if (lf) {
-		NRF_CLOCK->EVENTS_LFCLKSTARTED = 0;
+		nrf_clock_addr->EVENTS_LFCLKSTARTED = 0;
 
 		if (lf_intenset) {
 			/* INTENSET is used as state flag to start calibration,
 			 * hence clear it here.
 			 */
-			NRF_CLOCK->INTENCLR = CLOCK_INTENCLR_LFCLKSTARTED_Msk;
+			nrf_clock_addr->INTENCLR = CLOCK_INTENCLR_LFCLKSTARTED_Msk;
 
 			/* Start HF Clock if LF RC is used. */
 			if ((NRF_CLOCK->LFCLKSRCCOPY & CLOCK_LFCLKSRCCOPY_SRC_Msk) ==
@@ -364,30 +367,30 @@ static void _power_clock_isr(void *arg)
 		*(volatile u32_t *)0x40000C34 = 0x00000000;
 #endif /* CONFIG_SOC_SERIES_NRF52X */
 
-		NRF_CLOCK->EVENTS_DONE = 0;
+		nrf_clock_addr->EVENTS_DONE = 0;
 
 		/* Calibration done, stop 16M Xtal. */
 		err = _m16src_stop(dev, NULL);
 		__ASSERT_NO_MSG(!err || err == -EBUSY);
 
 		/* Start timer for next calibration. */
-		NRF_CLOCK->TASKS_CTSTART = 1;
+		nrf_clock_addr->TASKS_CTSTART = 1;
 	}
 
 	if (ctto) {
 		int err;
 
-		NRF_CLOCK->EVENTS_CTTO = 0;
+		nrf_clock_addr->EVENTS_CTTO = 0;
 
 		/* Start HF clock, if already started
 		 * then explicitly assert IRQ; we use the INTENSET
 		 * as a state flag to start calibration.
 		 */
-		NRF_CLOCK->INTENSET = CLOCK_INTENSET_HFCLKSTARTED_Msk;
+		nrf_clock_addr->INTENSET = CLOCK_INTENSET_HFCLKSTARTED_Msk;
 
 		err = _m16src_start(dev, false);
 		if (!err) {
-			NVIC_SetPendingIRQ(POWER_CLOCK_IRQn);
+			NVIC_SetPendingIRQ(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 		} else {
 			__ASSERT_NO_MSG(err == -EINPROGRESS);
 		}
@@ -419,11 +422,11 @@ static int _clock_control_init(struct device *dev)
 	 * power peripheral driver and/or new SoC series.
 	 * NOTE: Currently the operations here are idempotent.
 	 */
-	IRQ_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn,
-		    CONFIG_CLOCK_CONTROL_NRF5_IRQ_PRIORITY,
+	IRQ_CONNECT(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ,
+		    DT_NORDIC_NRF_CLOCK_CLOCK_IRQ_PRIORITY,
 		    _power_clock_isr, 0, 0);
 
-	irq_enable(POWER_CLOCK_IRQn);
+	irq_enable(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 
 	return 0;
 }
@@ -465,7 +468,7 @@ void nrf5_power_usb_power_int_enable(bool enable)
 
 	if (enable) {
 		nrf_power_int_enable(mask);
-		irq_enable(POWER_CLOCK_IRQn);
+		irq_enable(DT_NORDIC_NRF_CLOCK_CLOCK_IRQ);
 	} else {
 		nrf_power_int_disable(mask);
 	}
