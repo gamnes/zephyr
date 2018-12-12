@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2018, Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+title: Nordic nRF Family RNG node
+version: 0.1
+
+description: >
+    This is a representation of the Nordic nRF RNG node
+
+properties:
+    compatible:
+      type: string
+      category: required
+      description: compatible strings
+      constraint: "nordic,nrf-rng"
+
+    reg:
+      type: array
+      description: mmio register space
+      generation: define
+      category: required
+
+    interrupts:
+      type: array
+      category: required
+      description: Required interrupts and its priority. Range 0-2 for nRF51, Range 0-5 for nRF52, Defaults 2, 5
+      generation: define
+
+    label:
+      type: string
+      category: required
+      description: Human readable string describing the device (used by Zephyr for API name)
+      generation: define
+...

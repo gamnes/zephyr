@@ -57,6 +57,10 @@
 	scl-pin = <2>;
 };
 
+&rng {
+	status = "ok";
+};
+
 &flash0 {
 	/*
 	 * For more information, see:

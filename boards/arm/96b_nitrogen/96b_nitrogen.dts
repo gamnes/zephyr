@@ -75,6 +75,10 @@
 	scl-pin = <22>;
 };
 
+&rng {
+	status = "ok";
+};
+
 &spi0 {
 	status = "ok";
 	sck-pin = <26>;

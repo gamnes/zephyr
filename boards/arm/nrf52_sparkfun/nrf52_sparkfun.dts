@@ -60,6 +60,10 @@
 	rx-pin = <26>;
 };
 
+&rng {
+	status = "ok";
+};
+
 &flash0 {
 	/*
 	 * For more information, see:

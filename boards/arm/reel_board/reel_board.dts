@@ -108,6 +108,10 @@
 	};
 };
 
+&rng {
+	status = "ok";
+};
+
 &spi3 {
 	status = "ok";
 	sck-pin = <19>;

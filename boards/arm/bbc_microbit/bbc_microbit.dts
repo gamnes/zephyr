@@ -69,6 +69,10 @@
 	};
 };
 
+&rng {
+	status = "ok";
+};
+
 &flash0 {
 	/*
 	 * For more information, see:

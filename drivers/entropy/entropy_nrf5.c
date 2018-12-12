@@ -266,8 +266,8 @@ static int entropy_nrf5_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len
 		int irq_enabled;
 
 		key = irq_lock();
-		irq_enabled = irq_is_enabled(RNG_IRQn);
-		irq_disable(RNG_IRQn);
+		irq_enabled = irq_is_enabled(DT_NORDIC_NRF_RNG_RNG_IRQ);
+		irq_disable(DT_NORDIC_NRF_RNG_RNG_IRQ);
 		irq_unlock(key);
 
 		nrf_rng_event_clear(NRF_RNG_EVENT_VALRDY);
@@ -283,7 +283,7 @@ static int entropy_nrf5_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len
 			}
 
 			byte = random_byte_get();
-			NVIC_ClearPendingIRQ(RNG_IRQn);
+			NVIC_ClearPendingIRQ(DT_NORDIC_NRF_RNG_RNG_IRQ);
 
 			if (byte < 0) {
 				continue;
@@ -293,7 +293,7 @@ static int entropy_nrf5_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len
 		} while (len);
 
 		if (irq_enabled) {
-			irq_enable(RNG_IRQn);
+			irq_enable(DT_NORDIC_NRF_RNG_RNG_IRQ);
 		}
 	}
 
@@ -341,9 +341,9 @@ static int entropy_nrf5_init(struct device *device)
 	nrf_rng_int_enable(NRF_RNG_INT_VALRDY_MASK);
 	nrf_rng_task_trigger(NRF_RNG_TASK_START);
 
-	IRQ_CONNECT(RNG_IRQn, CONFIG_ENTROPY_NRF5_PRI, isr,
+	IRQ_CONNECT(DT_NORDIC_NRF_RNG_RNG_IRQ, DT_NORDIC_NRF_RNG_RNG_IRQ_PRIORITY, isr,
 		    &entropy_nrf5_data, 0);
-	irq_enable(RNG_IRQn);
+	irq_enable(DT_NORDIC_NRF_RNG_RNG_IRQ);
 
 	return 0;
 }

@@ -42,6 +42,10 @@
 	cts-pin = <7>;
 };
 
+&rng {
+	status = "ok";
+};
+
 &flash0 {
 	/*
 	 * For more information, see:

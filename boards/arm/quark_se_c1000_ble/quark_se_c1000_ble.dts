@@ -36,3 +36,7 @@
 	rts-pin = <8>;
 	cts-pin = <10>;
 };
+
+&rng {
+	status = "ok";
+};

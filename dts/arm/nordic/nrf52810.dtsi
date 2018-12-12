@@ -45,6 +45,7 @@
 		wdt-0 = &wdt;
 		pwm-0 = &pwm0;
 		qdec-0 = &qdec;
+		rng = &rng;
 	};
 
 	soc {
@@ -107,6 +108,14 @@
 			interrupts = <18 1>;
 			status = "disabled";
 			label = "QDEC";
+		};
+
+		rng: rng@4000D000 {
+			compatible = "nordic,nrf-rng";
+			reg = <0x4000D000 0x1000>;
+			interrupts = <13 5>;
+			status = "disabled";
+			label = "RNG";
 		};
 
 		spi0: spi@40004000 {

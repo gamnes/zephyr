@@ -68,3 +68,7 @@
 	sda-pin = <26>;
 	scl-pin = <27>;
 };
+
+&rng {
+	status = "ok";
+};
